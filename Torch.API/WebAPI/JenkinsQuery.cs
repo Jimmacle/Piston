@@ -30,7 +30,17 @@ namespace Torch.API.WebAPI
 
         public async Task<Job> GetLatestVersion(string branch)
         {
-            var h = await _client.GetAsync(string.Format(BRANCH_QUERY, branch));
+            HttpResponseMessage h;
+            try
+            {
+                h = await _client.GetAsync(string.Format(BRANCH_QUERY, branch));
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex,"Failed to reach Torch servers for update!");
+                return null;
+            }
+
             if (!h.IsSuccessStatusCode)
             {
                 Log.Error($"Branch query failed with code {h.StatusCode}");
@@ -76,7 +86,17 @@ namespace Torch.API.WebAPI
 
         public async Task<bool> DownloadRelease(Job job, string path)
         {
-            var h = await _client.GetAsync(job.URL + ARTIFACT_PATH);
+            HttpResponseMessage h;
+            try
+            {
+                h = await _client.GetAsync(job.URL + ARTIFACT_PATH);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to reach Torch servers for update!");
+                return false;
+            }
+
             if (!h.IsSuccessStatusCode)
             {
                 Log.Error($"Job download failed with code {h.StatusCode}");

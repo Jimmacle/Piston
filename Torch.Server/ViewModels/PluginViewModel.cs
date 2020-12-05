@@ -10,16 +10,30 @@ using NLog;
 using Torch.API;
 using Torch.API.Plugins;
 using Torch.Server.Views;
+using Torch.Server.Views.Commands;
 
 namespace Torch.Server.ViewModels
 {
-    public class PluginViewModel
+    public class PluginViewModel : ViewModel
     {
         public UserControl Control { get; }
-        public string Name { get; }
+
+        public string Name
+        {
+            get
+            {
+                if (State != PluginState.Enabled)
+                    return $"* {_name}";
+                return _name;
+            }
+            private set { _name = value; }
+        }
+
         public ITorchPlugin Plugin { get; }
+        public PluginState State => Plugin.State;
 
         private static Logger _log = LogManager.GetCurrentClassLogger();
+        private string _name;
 
         public PluginViewModel(ITorchPlugin plugin)
         {
@@ -42,6 +56,18 @@ namespace Torch.Server.ViewModels
 
             ThemeControl.UpdateDynamicControls += UpdateResourceDict;
             UpdateResourceDict(ThemeControl.currentTheme);
+
+            ((TorchPluginBase)plugin).StateChanged += PluginViewModel_StateChanged;
+        }
+
+        private void PluginViewModel_StateChanged(PluginState arg1, PluginState arg2)
+        {
+            OnPropertyChanged(nameof(TorchPluginBase.State));
+            OnPropertyChanged(nameof(Color));
+            OnPropertyChanged(nameof(State));
+            OnPropertyChanged(nameof(ToolTip));
+            OnPropertyChanged(nameof(Name));
+            PluginCommand.RaiseGlobalEnable();
         }
 
         public void UpdateResourceDict(ResourceDictionary dictionary)
@@ -53,9 +79,12 @@ namespace Torch.Server.ViewModels
             this.Control.Resources.MergedDictionaries.Add(dictionary);
         }
 
-        public Brush Color
+        public string Color => BColor.ToString();
+
+        public Brush BColor
         {
             get {
+                //_log.Warn($"{Name} C: {State}");
                 switch (Plugin.State)
                 {
                     case PluginState.NotInitialized:
@@ -67,7 +96,9 @@ namespace Torch.Server.ViewModels
                     case PluginState.UninstallRequested:
                         return Brushes.Gold;
                     case PluginState.NotInstalled:
+                    case PluginState.DisableRequested:
                     case PluginState.DisabledUser:
+                    case PluginState.EnableRequested:
                         return Brushes.Gray;
                     case PluginState.Enabled:
                         return Brushes.Transparent;
@@ -79,7 +110,9 @@ namespace Torch.Server.ViewModels
 
         public string ToolTip
         {
-            get { switch (Plugin.State)
+            get {
+                //_log.Warn($"{Name} TT: {State}");
+                switch (Plugin.State)
                 {
                     case PluginState.NotInitialized:
                         return "Error during load.";
@@ -94,9 +127,13 @@ namespace Torch.Server.ViewModels
                     case PluginState.NotInstalled:
                         return "Not installed. Click 'Enable'";
                     case PluginState.Enabled:
-                        return string.Empty;
+                        return Name;
                     case PluginState.MissingDependency:
                         return "Dependency missing. Check the log.";
+                    case PluginState.DisableRequested:
+                        return "Will be disabled on restart.";
+                    case PluginState.EnableRequested:
+                        return "Will be enabled on restart";
                     default:
                         throw new ArgumentOutOfRangeException();
                 }

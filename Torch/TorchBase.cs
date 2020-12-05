@@ -56,6 +56,8 @@ using VRage.Steam;
 using VRage.Utils;
 using VRageRender;
 
+[assembly: InternalsVisibleTo("Torch.Server")]
+
 namespace Torch
 {
     /// <summary>

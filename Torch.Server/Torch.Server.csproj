@@ -274,6 +274,7 @@
     <Compile Include="ViewModels\ModItemInfo.cs" />
     <Compile Include="ViewModels\SessionSettingsViewModel.cs" />
     <Compile Include="ViewModels\WorldConfigurationViewModel.cs" />
+    <Compile Include="Views\Commands\PluginContextCommands.cs" />
     <Compile Include="Views\Converters\DefinitionToIdConverter.cs" />
     <Compile Include="Views\Converters\BooleanAndConverter.cs" />
     <Compile Include="Views\Converters\ListConverter.cs" />

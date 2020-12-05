@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -20,26 +21,42 @@ namespace Torch.API.WebAPI
         private static PluginQuery _instance;
         public static PluginQuery Instance => _instance ?? (_instance = new PluginQuery());
 
+        private static string _pluginPath;
+
         private PluginQuery()
         {
             _client = new HttpClient();
         }
 
+        public static void SetPluginPath(string path)
+        {
+            _pluginPath = path;
+        }
+
         public async Task<PluginResponse> QueryAll()
         {
-            var h = await _client.GetAsync(ALL_QUERY);
-            if (!h.IsSuccessStatusCode)
+            PluginResponse response;
+            string res;
+            try
             {
-                Log.Error($"Plugin query returned response {h.StatusCode}");
+                var h = await _client.GetAsync(ALL_QUERY);
+                if (!h.IsSuccessStatusCode)
+                {
+                    Log.Error($"Plugin query returned response {h.StatusCode}");
+                    return null;
+                }
+
+                res = await h.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to download plugin data!");
                 return null;
             }
 
-            var r = await h.Content.ReadAsStringAsync();
-
-            PluginResponse response;
             try
             {
-                response = JsonConvert.DeserializeObject<PluginResponse>(r);
+                response = JsonConvert.DeserializeObject<PluginResponse>(res);
             }
             catch (Exception ex)
             {
@@ -56,20 +73,28 @@ namespace Torch.API.WebAPI
 
         public async Task<PluginFullItem> QueryOne(string guid)
         {
-
-            var h = await _client.GetAsync(string.Format(PLUGIN_QUERY, guid));
-            if (!h.IsSuccessStatusCode)
+            PluginFullItem response;
+            string res;
+            try
             {
-                Log.Error($"Plugin query returned response {h.StatusCode}");
+                var h = await _client.GetAsync(string.Format(PLUGIN_QUERY, guid));
+                if (!h.IsSuccessStatusCode)
+                {
+                    Log.Error($"Plugin query returned response {h.StatusCode}");
+                    return null;
+                }
+
+                res = await h.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to download plugin data!");
                 return null;
             }
 
-            var r = await h.Content.ReadAsStringAsync();
-
-            PluginFullItem response;
             try
             {
-                response = JsonConvert.DeserializeObject<PluginFullItem>(r);
+                response = JsonConvert.DeserializeObject<PluginFullItem>(res);
             }
             catch (Exception ex)
             {
@@ -79,49 +104,55 @@ namespace Torch.API.WebAPI
             return response;
         }
 
-        public async Task<bool> DownloadPlugin(Guid guid, string path = null)
+        public async Task<(bool, string)> DownloadPlugin(Guid guid, bool beta = false, string path = null)
         {
-            return await DownloadPlugin(guid.ToString(), path);
+            return await DownloadPlugin(guid.ToString(), beta, path);
         }
 
-        public async Task<bool> DownloadPlugin(string guid, string path = null)
+        public async Task<(bool, string)> DownloadPlugin(string guid, bool beta = false, string path = null)
         {
             var item = await QueryOne(guid);
-            return await DownloadPlugin(item, path);
+            return await DownloadPlugin(item, beta, path);
         }
 
-        public async Task<bool> DownloadPlugin(PluginFullItem item, string path = null)
+        public async Task<(bool, string)> DownloadPlugin(PluginFullItem item, bool beta = false, string path = null)
         {
             try
             {
-                path = path ?? $"Plugins\\{item.Name}.zip";
-                string relpath = Path.GetDirectoryName(path);
-
-                Directory.CreateDirectory(relpath);
-
+                if (string.IsNullOrEmpty(path))
+                    path = Path.Combine(_pluginPath, $"{item.Name} - {item.ID}");
+                
                 var h = await _client.GetAsync(string.Format(PLUGIN_QUERY, item.ID));
                 string res = await h.Content.ReadAsStringAsync();
                 var response = JsonConvert.DeserializeObject<PluginFullItem>(res);
                 if (response.Versions.Length == 0)
                 {
                     Log.Error($"Selected plugin {item.Name} does not have any versions to download!");
-                    return false;
+                    return (false, path);
                 }
-                var version = response.Versions.FirstOrDefault(v => v.Version == response.LatestVersion);
+
+                //find latest version, skipping betas unless the user wants them
+                var version = response.Versions.FirstOrDefault(v => !v.IsBeta || beta);
                 if (version == null)
                 {
                     Log.Error($"Could not find latest version for selected plugin {item.Name}");
-                    return false;
+                    return (false, path);
                 }
                 var s = await _client.GetStreamAsync(version.URL);
 
-                if(File.Exists(path))
-                    File.Delete(path);
-
-                using (var f = File.Create(path))
+                Directory.CreateDirectory(path);
+                using (var gz = new ZipArchive(s, ZipArchiveMode.Read))
                 {
-                    await s.CopyToAsync(f);
-                    await f.FlushAsync();
+                    foreach (var entry in gz.Entries)
+                    {
+                        string filePath = Path.Combine(path, entry.FullName);
+                        Log.Debug(filePath);
+                        File.Delete(filePath);
+                        using (var es = entry.Open())
+                        using (var fs = File.Create(filePath))
+                            await es.CopyToAsync(fs);
+                            
+                    }
                 }
             }
             catch (Exception ex)
@@ -129,8 +160,9 @@ namespace Torch.API.WebAPI
                 Log.Error(ex, "Failed to download plugin!");
             }
 
-            return true;
+            return (true, path);
         }
+
     }
 
     public class PluginResponse

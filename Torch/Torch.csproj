@@ -202,7 +202,6 @@
     <Compile Include="Collections\TransformEnumerator.cs" />
     <Compile Include="Commands\ConsoleCommandContext.cs" />
     <Compile Include="Event\EventShimAttribute.cs" />
-    <Compile Include="Extensions\LinqExtensions.cs" />
     <Compile Include="Managers\ChatManager\ChatManagerClient.cs" />
     <Compile Include="Managers\ChatManager\ChatManagerServer.cs" />
     <Compile Include="Extensions\DispatcherExtensions.cs" />

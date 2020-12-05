@@ -18,9 +18,12 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Newtonsoft.Json;
 using NLog;
+using Torch.API.Managers;
 using Torch.API.WebAPI;
 using Torch.Collections;
+using Torch.Managers;
 using Torch.Server.Annotations;
+using Path = System.IO.Path;
 
 namespace Torch.Server.Views
 {
@@ -95,10 +98,12 @@ namespace Torch.Server.Views
             Task.Run(async () =>
                      {
                          var result = await PluginQuery.Instance.DownloadPlugin(item.ID);
-                         MessageBox.Show(result ? "Plugin downloaded successfully! Please restart the server to load changes."
+                         MessageBox.Show(result.Item1 ? "Plugin downloaded successfully! Please restart the server to load changes."
                                                 : "Plugin failed to download! See log for details.", 
                                                 "Plugin Downloader",
                                                 MessageBoxButton.OK);
+                         var man = TorchBase.Instance.Managers.GetManager<PluginManager>();
+                         man?.InsertDummy(item.Name, new Guid(item.ID));
                      });
         }
 

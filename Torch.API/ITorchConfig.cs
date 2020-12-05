@@ -14,6 +14,7 @@ namespace Torch
         bool NoGui { get; set; }
         bool NoUpdate { get; set; }
         List<Guid> Plugins { get; set; }
+        List<Guid> DisabledPlugins { get; set; }
         bool LocalPlugins { get; set; }
         bool RestartOnCrash { get; set; }
         bool ShouldUpdatePlugins { get; }
@@ -24,6 +25,8 @@ namespace Torch
         string ChatColor { get; set; }
         string TestPlugin { get; set; }
         bool DisconnectOnRestart { get; set; }
+        bool DownloadDependencies { get; set; }
+        bool BetaPlugins { get; set; }
 
         bool Save(string path = null);
     }

@@ -46,6 +46,8 @@ namespace Torch.API.Plugins
          NotInitialized,
          DisabledError,
          DisabledUser,
+         DisableRequested,
+         EnableRequested,
          UpdateRequired,
          UninstallRequested,
          NotInstalled,

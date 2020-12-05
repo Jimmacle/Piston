@@ -19,12 +19,25 @@
                 <RowDefinition/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <ListView Grid.Row="0" ItemsSource="{Binding Plugins}" SelectedItem="{Binding SelectedPlugin}" Margin="3">
+            <ListView Name="PluginList" Grid.Row="0" ItemsSource="{Binding Plugins}" SelectedItem="{Binding SelectedPlugin}" Margin="3">
+                <ListView.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="All actions apply at next restart" IsEnabled="False"/>
+                        <Separator/>
+                        <MenuItem Header="{Binding SelectedPlugin.Name}" IsEnabled="False"/>
+                        <MenuItem Header="{Binding SelectedPlugin.State}" IsEnabled="False"/>
+                        <Separator/>
+                        <MenuItem Header ="Enable" Command="{Binding EnableItem}" CommandParameter="{Binding SelectedPlugin}"/>
+                        <MenuItem Header ="Disable" Command="{Binding DisableItem}" CommandParameter="{Binding SelectedPlugin}"/>
+                        <MenuItem Header ="Uninstall" Command="{Binding UninstallItem}" CommandParameter="{Binding SelectedPlugin}"/>
+                    </ContextMenu>
+                </ListView.ContextMenu>
                 <ListView.ItemTemplate>
                     <DataTemplate>
-                        <TextBlock Text="{Binding Name}" Background="{Binding Color}" ToolTip="{Binding ToolTip}"/>
+                        <TextBlock Text="{Binding Name}" Background="{Binding Color}"  ToolTip="{Binding ToolTip}"/>
                     </DataTemplate>
                 </ListView.ItemTemplate>
+                
             </ListView>
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>

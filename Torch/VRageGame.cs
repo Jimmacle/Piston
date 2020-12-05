@@ -145,6 +145,7 @@ namespace Torch
             MySessionComponentExtDebug.ForceDisable = true;
             MyPerGameSettings.SendLogToKeen = false;
             // SpaceEngineersGame.SetupAnalytics();
+            MySandboxGame.InitMultithreading();
 
             MyVRage.Platform.InitScripting(MyVRageScripting.Create());
             MyFileSystem.ExePath = Path.GetDirectoryName(typeof(SpaceEngineersGame).Assembly.Location);

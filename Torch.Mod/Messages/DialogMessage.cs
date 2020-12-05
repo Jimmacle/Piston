@@ -8,23 +8,23 @@ using Sandbox.ModAPI;
 
 namespace Torch.Mod.Messages
 {
-    /// Dialogs are structured as follows
-    /// 
-    /// _____________________________________
-    /// |            Title                   |
-    /// --------------------------------------
-    /// |          Prefix Subtitle           |
-    /// --------------------------------------
-    /// |  ________________________________  |
-    /// |  |         Content               | |
-    /// |  --------------------------------- |
-    /// |            ____________            |
-    /// |           | ButtonText |           |
-    /// |           --------------           |
-    /// --------------------------------------
-    /// 
-    /// Button has a callback on click option, 
-    /// but can't serialize that, so ¯\_(ツ)_/¯
+    // Dialogs are structured as follows
+    // 
+    // _____________________________________
+    // |            Title                   |
+    // --------------------------------------
+    // |          Prefix Subtitle           |
+    // --------------------------------------
+    // |  ________________________________  |
+    // |  |         Content               | |
+    // |  --------------------------------- |
+    // |            ____________            |
+    // |           | ButtonText |           |
+    // |           --------------           |
+    // --------------------------------------
+    // 
+    // Button has a callback on click option, 
+    // but can't serialize that, so ¯\_(ツ)_/¯
     [ProtoContract]
     public class DialogMessage : MessageBase
     {
