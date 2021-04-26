@@ -11,11 +11,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using System.Runtime.InteropServices;
 using NLog;
 using NLog.Targets;
 using Sandbox.Engine.Utils;
 using Torch.Utils;
 using VRage.FileSystem;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Torch.Server
 {
@@ -258,6 +260,9 @@ quit";
             _server.FatalException = true;
             var ex = (Exception)e.ExceptionObject;
             LogException(ex);
+
+            WriteParallelStackTrace();
+
             if (MyFakes.ENABLE_MINIDUMP_SENDING)
             {
                 string path = Path.Combine(MyFileSystem.UserDataPath, "Minidump.dmp");
@@ -281,6 +286,37 @@ quit";
             }
 
             Process.GetCurrentProcess().Kill();
+        }
+
+        private static void WriteParallelStackTrace()
+        {
+            using (var dataTarget = DataTarget.CreateSnapshotAndAttach(Process.GetCurrentProcess().Id))
+            {
+                ClrInfo runtimeInfo = dataTarget.ClrVersions[0];
+                var runtime = runtimeInfo.CreateRuntime();
+
+                string domains = "";
+                foreach (var domain in runtime.AppDomains)
+                {
+                    domains += $"id: {domain.Id}, name: {domain.Name}, address: {domain.Address}";
+                }
+                Log.Error("domains: " + domains);
+
+                foreach (var thread in runtime.Threads)
+                {
+                    string stack = "";
+                    foreach (var frame in thread.EnumerateStackTrace())
+                    {
+                        if (frame.Method != null)
+                        {
+                            stack += "\n\t" + frame.Method.Signature;
+                        }
+                    }
+
+                    Log.Error($"stack of thread {thread.OSThreadId}:" + stack);
+                }
+                LogManager.Flush();
+            }
         }
     }
 }
