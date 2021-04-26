@@ -138,7 +138,8 @@ namespace Torch.Server.Views
                 MessageBox.Show("A world is not selected.");
                 return;
             }
-            
+            if (w.Checkpoint.PromotedUsers == null)
+                w.Checkpoint.PromotedUsers = new SerializableDictionary<ulong, MyPromoteLevel>();
             d.Edit(w.Checkpoint.PromotedUsers.Dictionary);
             _instanceManager.DedicatedConfig.Administrators = w.Checkpoint.PromotedUsers.Dictionary.Where(k => k.Value >= MyPromoteLevel.Admin).Select(k => k.Key.ToString()).ToList();
         }
