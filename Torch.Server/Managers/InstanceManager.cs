@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Havok;
 using NLog;
+using Sandbox;
 using Sandbox.Engine.Networking;
 using Sandbox.Engine.Utils;
 using Sandbox.Game;
@@ -56,17 +57,19 @@ namespace Torch.Server.Managers
             //Initializes saves path. Why this isn't in Init() we may never know.
             MyFileSystem.InitUserSpecific(null);
 
-            var configPath = Path.Combine(path, CONFIG_NAME);
-            if (!File.Exists(configPath))
-            {
-                Log.Error($"Failed to load dedicated config at {path}");
-                return;
-            }
+            // why?....
+            // var configPath = Path.Combine(path, CONFIG_NAME);
+            // if (!File.Exists(configPath))
+            // {
+            //     Log.Error($"Failed to load dedicated config at {path}");
+            //     return;
+            // }
 
-            var config = new MyConfigDedicated<MyObjectBuilder_SessionSettings>(configPath);
-            config.Load(configPath);
+            
+            // var config = new MyConfigDedicated<MyObjectBuilder_SessionSettings>(configPath);
+            // config.Load(configPath);
 
-            DedicatedConfig = new ConfigDedicatedViewModel(config);
+            DedicatedConfig = new ConfigDedicatedViewModel((MyConfigDedicated<MyObjectBuilder_SessionSettings>) MySandboxGame.ConfigDedicated);
 
             var worldFolders = Directory.EnumerateDirectories(Path.Combine(Torch.Config.InstancePath, "Saves"));
 

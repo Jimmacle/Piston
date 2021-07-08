@@ -46,7 +46,8 @@ namespace Torch.Session
         public TorchSessionManager(ITorchBase torchInstance) : base(torchInstance)
         {
             _overrideMods = new Dictionary<ulong, MyObjectBuilder_Checkpoint.ModItem>();
-            _overrideMods.Add(TorchModCore.MOD_ID, ModItemUtils.Create(TorchModCore.MOD_ID));
+            if (Torch.Config.UgcServiceType == UGCServiceType.Steam)
+                _overrideMods.Add(TorchModCore.MOD_ID, ModItemUtils.Create(TorchModCore.MOD_ID));
         }
 
         /// <inheritdoc/>

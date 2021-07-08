@@ -159,31 +159,33 @@ namespace Torch
 
             MyFileSystem.Reset();
             MyInitializer.InvokeBeforeRun(_appSteamId, _appName, _userDataPath);
+
+            _log.Info("Loading Dedicated Config");
+            // object created in SpaceEngineersGame.SetupPerGameSettings()
+            MySandboxGame.ConfigDedicated.Load();
+            MyPlatformGameSettings.CONSOLE_COMPATIBLE = MySandboxGame.ConfigDedicated.ConsoleCompatibility;
             
             //Type.GetType("VRage.Steam.MySteamService, VRage.Steam").GetProperty("IsActive").GetSetMethod(true).Invoke(service, new object[] {SteamAPI.Init()});
-            _log.Info("Initializing UGC services");
-            IMyGameService service;
-            IMyUGCService serviceInstance;
-            var aggregator = new MyServerDiscoveryAggregator();
-            if (TorchBase.Instance.Config.UgcServiceType == UGCServiceType.Steam)
+            _log.Info("Initializing network services");
+
+            var isEos = TorchBase.Instance.Config.UgcServiceType == UGCServiceType.EOS;
+
+            if (isEos)
             {
-                service = MySteamGameService.Create(dedicated, _appSteamId);
-                serviceInstance = MySteamUgcService.Create(_appSteamId, service);
-                MySteamGameService.InitNetworking(dedicated,
-                    service,
-                    "Space Engineers",
-                    aggregator);
+                _log.Info("Running on Epic Online Services.");
+                _log.Warn("Steam workshop will not work with current settings. Some functions might not work properly!");
             }
-            else
+
+            var aggregator = new MyServerDiscoveryAggregator();
+            MyServiceManager.Instance.AddService<IMyServerDiscovery>(aggregator);
+            
+            IMyGameService service;
+            if (isEos)
             {
                 service = MyEOSService.Create();
 
-                serviceInstance = MyModIoService.Create(service, "spaceengineers", "264",
-                    "1fb4489996a5e8ffc6ec1135f9985b5b", "331", "f2b64abe55452252b030c48adc0c1f0e",
-                    MyPlatformGameSettings.UGC_TEST_ENVIRONMENT, true);
-                
                 MyEOSService.InitNetworking(dedicated,
-                    dedicated ? MyPerServerSettings.GameDSName : MyPerServerSettings.GameNameSafe,
+                    "Space Engineers",
                     service,
                     "xyza7891A4WeGrpP85BTlBa3BSfUEABN",
                     "ZdHZVevSVfIajebTnTmh5MVi3KPHflszD9hJB7mRkgg",
@@ -194,25 +196,39 @@ namespace Torch
                     MyEOSService.CreatePlatform(),
                     MySandboxGame.ConfigDedicated.VerboseNetworkLogging,
                     Enumerable.Empty<string>(),
-                    (MyServerDiscoveryAggregator) MyGameService.ServerDiscovery,
-                    null);
-                
+                    aggregator,
+                    MyMultiplayer.Channels);
+
                 var mockingInventory = new MyMockingInventory(service);
                 MyServiceManager.Instance.AddService<IMyInventoryService>(mockingInventory);
             }
-            MyServiceManager.Instance.AddService<IMyGameService>(service);
-            MyServiceManager.Instance.AddService<IMyUGCService>(serviceInstance);
-            MyGameService.WorkshopService.AddAggregate(serviceInstance);
+            else
+            {
+                service = MySteamGameService.Create(dedicated, _appSteamId);
+                MyGameService.WorkshopService.AddAggregate(MySteamUgcService.Create(_appSteamId, service));
+                MySteamGameService.InitNetworking(dedicated,
+                    service,
+                    "Space Engineers",
+                    aggregator);
+            }
+
+            MyServiceManager.Instance.AddService(service);
             
-            _log.Info("Initializing services");
-            MyServiceManager.Instance.AddService(new MyNullMicrophone());
+            MyGameService.WorkshopService.AddAggregate(MyModIoService.Create(service, "spaceengineers", "264",
+                "1fb4489996a5e8ffc6ec1135f9985b5b", "331", "f2b64abe55452252b030c48adc0c1f0e",
+                MyPlatformGameSettings.UGC_TEST_ENVIRONMENT, true));
             
-            if (!MyGameService.HasGameServer)
+            if (!isEos && !MyGameService.HasGameServer)
             {
                 _log.Warn("Network service is not running! Please reinstall dedicated server.");
                 return;
             }
+            
+            _log.Info("Initializing services");
+            MyServiceManager.Instance.AddService<IMyMicrophoneService>(new MyNullMicrophone());
 
+            MyNetworkMonitor.Init();
+            
             _log.Info("Services initialized");
             MySandboxGame.InitMultithreading();
             // MyInitializer.InitCheckSum();

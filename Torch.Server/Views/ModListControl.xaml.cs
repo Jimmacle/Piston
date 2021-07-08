@@ -21,6 +21,7 @@ using System.Windows.Threading;
 using VRage.Game;
 using NLog;
 using Sandbox.Engine.Networking;
+using Torch.API;
 using Torch.Server.Managers;
 using Torch.API.Managers;
 using Torch.Server.ViewModels;
@@ -41,6 +42,7 @@ namespace Torch.Server.Views
         ModItemInfo _draggedMod;
         bool _hasOrderChanged = false;
         bool _isSortedByLoadOrder = true;
+        private readonly ITorchConfig _config;
 
         //private List<BindingExpression> _bindingExpressions = new List<BindingExpression>();
         /// <summary>
@@ -51,11 +53,16 @@ namespace Torch.Server.Views
             InitializeComponent();
             _instanceManager = TorchBase.Instance.Managers.GetManager<InstanceManager>();
             _instanceManager.InstanceLoaded += _instanceManager_InstanceLoaded;
+            _config = TorchBase.Instance.Config;
             //var mods = _instanceManager.DedicatedConfig?.Mods;
             //if( mods != null)
             //    DataContext = new ObservableCollection<MyObjectBuilder_Checkpoint.ModItem>();
             DataContext = _instanceManager.DedicatedConfig?.Mods;
-
+            UgcServiceTypeBox.ItemsSource = new[]
+            {
+                new KeyValuePair<string, string>("Steam", "steam"),
+                new KeyValuePair<string, string>("Mod.Io", "mod.io")
+            };
             // Gets called once all children are loaded
             //Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(ApplyStyles));
         }
@@ -98,8 +105,8 @@ namespace Torch.Server.Views
         {
             if (TryExtractId(AddModIDTextBox.Text, out ulong id))
             {
-                var mod = new ModItemInfo(ModItemUtils.Create(id));
-                //mod.PublishedFileId = id;
+                var mod = new ModItemInfo(ModItemUtils.Create(id, UgcServiceTypeBox.SelectedValue?.ToString()));
+                
                 _instanceManager.DedicatedConfig.Mods.Add(mod);
                 Task.Run(mod.UpdateModInfoAsync)
                     .ContinueWith((t) =>
@@ -254,33 +261,41 @@ namespace Torch.Server.Views
 
             //let's see just how poorly we can do this
             var modList = ((MtObservableList<ModItemInfo>)DataContext).ToList();
-            var idList = modList.Select(m => m.PublishedFileId).ToList();
+            var idList = modList.Select(m => m.ToString()).ToList();
             var tasks = new List<Task>();
             //blocking
-            editor.Edit<ulong>(idList, "Mods");
+            editor.Edit<string>(idList, "Mods");
 
-            modList.RemoveAll(m => !idList.Contains(m.PublishedFileId));
-            foreach (var id in idList)
+            modList.RemoveAll(m =>
             {
-                if (!modList.Any(m => m.PublishedFileId == id))
-                {
-                    var mod = new ModItemInfo(ModItemUtils.Create(id));
-                    tasks.Add(Task.Run(mod.UpdateModInfoAsync));
-                    modList.Add(mod);
-                }
-            }
+                var mod = m.ToString();
+                return idList.Any(mod.Equals);
+            });
+            modList.AddRange(idList.Select(id =>
+            {
+                var info = new ModItemInfo(ModItemUtils.Create(id));
+                tasks.Add(Task.Run(info.UpdateModInfoAsync));
+                return info;
+            }));
             _instanceManager.DedicatedConfig.Mods.Clear();
             foreach (var mod in modList)
                 _instanceManager.DedicatedConfig.Mods.Add(mod);
 
             if (tasks.Any())
                 Task.WaitAll(tasks.ToArray());
-
+            
             Dispatcher.Invoke(() =>
                               {
                                   _instanceManager.DedicatedConfig.Save();
                               });
 
+        }
+
+        private void UgcServiceTypeBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if ((string) UgcServiceTypeBox.SelectedValue == UGCServiceType.Steam.ToString() &&
+                _config.UgcServiceType == UGCServiceType.EOS)
+                MessageBox.Show("Steam workshop is not available with current ugc service!");
         }
     } 
 }

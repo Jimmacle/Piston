@@ -7,8 +7,10 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using System.Runtime.CompilerServices;
 using NLog;
+using Sandbox.Engine.Networking;
 using VRage.Game;
 using Torch.Server.Annotations;
+using Torch.Utils;
 using Torch.Utils.SteamWorkshopTools;
 
 namespace Torch.Server.ViewModels
@@ -84,6 +86,15 @@ namespace Torch.Server.ViewModels
             }
         }
 
+        public string UgcService
+        {
+            get { return _modItem.PublishedServiceName; }
+            set
+            {
+                SetValue(ref _modItem.PublishedServiceName, value);
+            }
+        }
+
         /// <summary>
         /// Constructor, returns a new ModItemInfo instance
         /// </summary>
@@ -101,6 +112,9 @@ namespace Torch.Server.ViewModels
         /// <returns></returns>
         public async Task<bool> UpdateModInfoAsync()
         {
+            if (UgcService.ToLower() == "mod.io")
+                return true;
+            
             var msg = "";
             var workshopService = WebAPI.Instance;
             PublishedItemDetails modInfo = null;
@@ -126,6 +140,11 @@ namespace Torch.Server.ViewModels
                 //Name = modInfo.FileName;
                 return true;
             }
+        }
+
+        public override string ToString()
+        {
+            return $"{PublishedFileId}-{UgcService}";
         }
     }
 }
